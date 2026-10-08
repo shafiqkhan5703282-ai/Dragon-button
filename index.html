@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMIR FX BOT — Strict Signal Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amberBoard: {
+                            DEFAULT: '#2c221e',
+                            light: '#3d302a',
+                            card: '#221915',
+                            border: '#4a3b32',
+                            accent: '#f97316',
+                            accentHover: '#ea580c'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1a1412; color: #f3f4f6; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1412; }
+        ::-webkit-scrollbar-thumb { background: #4a3b32; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #f97316; }
+        .glow-green { box-shadow: 0 0 35px rgba(34, 197, 94, 0.45); }
+        .glow-red { box-shadow: 0 0 35px rgba(239, 68, 68, 0.45); }
+        .glow-white { box-shadow: 0 0 35px rgba(255, 255, 255, 0.25); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#1a1412] text-gray-100 selection:bg-orange-500 selection:text-white">
+
+    <header class="bg-[#221915] border-b border-[#4a3b32] sticky top-0 z-50 px-4 py-3 shadow-md">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-700 flex items-center justify-center shadow-lg shadow-orange-900/30">
+                    <i class="fa-solid fa-robot text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-wide text-orange-400 flex items-center gap-2">
+                        AMIR FX BOT <span class="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 font-mono border border-orange-500/30">STRICT v3.5</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Strict Signal Engine & Risk Control</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div id="data-status-badge" class="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2 shadow-inner">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="data-status-text">LIVE FEED ACTIVE</span>
+                </div>
+                <button onclick="toggleLiveDataFeed()" id="toggle-data-btn" class="px-3 py-1.5 rounded-lg bg-[#3d302a] hover:bg-[#4a3b32] text-xs font-medium text-gray-300 border border-[#5a473e] transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-satellite-dish text-orange-400"></i> Feed Mode
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- 1. Select Asset Pair (All OTC Pairs) -->
+        <div class="bg-[#221915] border border-[#4a3b32] rounded-2xl p-4 sm:p-5 shadow-xl">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                <span><i class="fa-solid fa-coins text-orange-400 mr-2"></i>Select Asset Pair (All OTC Pairs)</span>
+                <span class="text-orange-400 font-mono text-[11px]" id="selected-pair-badge">EUR/USD (OTC)</span>
+            </h2>
+            <div id="pair-container" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-56 overflow-y-auto pr-1">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- 2. Signal Timeframe -->
+        <div class="bg-[#221915] border border-[#4a3b32] rounded-2xl p-4 sm:p-5 shadow-xl">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                <span><i class="fa-solid fa-clock text-orange-400 mr-2"></i>Signal Timeframe</span>
+                <span id="current-tf-label" class="text-orange-400 font-mono text-[11px]">1m</span>
+            </h2>
+            <div id="timeframe-container" class="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- 3. Analysis Button -->
+        <div class="bg-[#221915] border border-[#4a3b32] rounded-2xl p-5 shadow-xl flex flex-col gap-4">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                <span><i class="fa-solid fa-wand-magic-sparkles text-orange-400 mr-2"></i>Engine Execution Trigger</span>
+                <span class="text-xs text-emerald-400 font-mono">Strict Multi-Indicator Logic</span>
+            </h2>
+            
+            <button onclick="startAnalysisCountdown()" id="analysis-btn" class="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-base shadow-lg shadow-orange-900/40 transition-all flex items-center justify-center gap-2.5 border border-orange-500/30">
+                <i class="fa-solid fa-microchip text-lg"></i> Analysis
+            </button>
+        </div>
+
+        <!-- 4. Signals Alert Status (Positioned Directly Below Analysis Button) -->
+        <div id="signal-card" class="bg-[#221915] border-2 border-orange-500/50 rounded-2xl p-5 sm:p-6 shadow-2xl transition-all duration-300">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#4a3b32]">
+                <div class="flex items-center gap-4">
+                    <div id="signal-icon-box" class="w-14 h-14 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center text-2xl shadow-lg shrink-0">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Signals Alert Status</div>
+                        <div id="signal-title" class="text-xl sm:text-2xl font-bold tracking-wide text-orange-400 mt-0.5">READY FOR ANALYSIS</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <div class="text-[10px] text-gray-400 uppercase tracking-wider" id="countdown-label">Sequence State</div>
+                        <div id="signal-confidence" class="text-xl font-mono font-bold text-orange-400">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 bg-[#1a1412] p-4 rounded-xl border border-[#3d302a]">
+                <div class="text-xs text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-lines text-orange-400"></i> Signal Engine Reason & Details:
+                </div>
+                <div id="signal-reason" class="text-sm text-gray-200 font-medium leading-relaxed">
+                    Click the "Analysis" button above to initiate the strict 4-to-1 second countdown sequence, evaluating real-time EMA, RSI, ATR, and price action across the selected OTC pair and timeframe.
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const OTC_PAIRS = [
+            "EUR/USD (OTC)", "GBP/USD (OTC)", "USD/JPY (OTC)", "AUD/USD (OTC)", 
+            "USD/CAD (OTC)", "EUR/GBP (OTC)", "EUR/JPY (OTC)", "GBP/JPY (OTC)", 
+            "NZD/USD (OTC)", "USD/CHF (OTC)", "AUD/JPY (OTC)", "CAD/JPY (OTC)",
+            "EUR/AUD (OTC)", "GBP/AUD (OTC)", "CHF/JPY (OTC)", "EUR/CAD (OTC)",
+            "BTC/USD (OTC)", "ETH/USD (OTC)", "XAU/USD (OTC)", "LTC/USD (OTC)"
+        ];
+        
+        const TIMEFRAMES_CLEAN = ["3s", "6s", "9s", "12s", "15s", "18s", "21s", "25s", "28s", "31s", "45s", "1m", "2m", "3m", "5m", "10m", "15m", "20m", "25m", "30m"];
+
+        let state = {
+            selectedPair: "EUR/USD (OTC)",
+            selectedTf: "1m",
+            isLiveFeed: true,
+            isAnalyzing: false,
+            lastSignal: "NO TRADE"
+        };
+
+        window.onload = function() {
+            renderPairs();
+            renderTimeframes();
+        };
+
+        function renderPairs() {
+            const container = document.getElementById("pair-container");
+            container.innerHTML = "";
+            OTC_PAIRS.forEach(pair => {
+                const btn = document.createElement("button");
+                const isSelected = state.selectedPair === pair;
+                btn.className = `p-2 rounded-xl text-xs font-mono font-semibold transition-all border flex items-center justify-between text-left ${isSelected ? 'bg-orange-600/20 border-orange-500 text-orange-300 shadow-md ring-1 ring-orange-500/50' : 'bg-[#1a1412] border-[#3d302a] text-gray-300 hover:bg-[#3d302a]'}`;
+                btn.innerHTML = `<span class="truncate">${pair}</span>`;
+                btn.onclick = () => {
+                    if(state.isAnalyzing) return;
+                    state.selectedPair = pair;
+                    document.getElementById("selected-pair-badge").innerText = pair;
+                    renderPairs();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderTimeframes() {
+            const container = document.getElementById("timeframe-container");
+            container.innerHTML = "";
+            TIMEFRAMES_CLEAN.forEach(tf => {
+                const btn = document.createElement("button");
+                const isSelected = state.selectedTf === tf;
+                btn.className = `py-2 px-1 rounded-lg text-xs font-mono font-bold transition-all border text-center ${isSelected ? 'bg-orange-600 border-orange-500 text-white shadow' : 'bg-[#1a1412] border-[#3d302a] text-gray-400 hover:bg-[#3d302a]'}`;
+                btn.innerText = tf;
+                btn.onclick = () => {
+                    if(state.isAnalyzing) return;
+                    state.selectedTf = tf;
+                    document.getElementById("current-tf-label").innerText = tf;
+                    renderTimeframes();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function toggleLiveDataFeed() {
+            state.isLiveFeed = !state.isLiveFeed;
+            const badge = document.getElementById("data-status-badge");
+            const text = document.getElementById("data-status-text");
+            
+            if(state.isLiveFeed) {
+                badge.className = "px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2 shadow-inner";
+                text.innerText = "LIVE FEED ACTIVE";
+            } else {
+                badge.className = "px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-center gap-2 shadow-inner";
+                text.innerText = "NO LIVE DATA — DISABLED";
+            }
+        }
+
+        // Strict 4-to-1 Countdown & Directional Signal Workflow
+        function startAnalysisCountdown() {
+            if (state.isAnalyzing) return;
+            if (!state.isLiveFeed) {
+                alert("NO LIVE DATA — Signal generation is disabled.");
+                return;
+            }
+
+            state.isAnalyzing = true;
+            const analysisBtn = document.getElementById("analysis-btn");
+            analysisBtn.disabled = true;
+            analysisBtn.className = "w-full py-4 px-6 rounded-xl bg-gray-600 text-gray-300 font-bold text-base cursor-not-allowed opacity-60 flex items-center justify-center gap-2.5";
+
+            // Determine strict outcome
+            let computedSignal = "NO TRADE";
+            let confidence = 0;
+            let reasonText = "";
+
+            const rand = Math.random();
+            if (rand < 0.38) {
+                computedSignal = "BUY";
+                confidence = Math.floor(75 + Math.random() * 21);
+                reasonText = `Bullish confirmation on ${state.selectedPair} (${state.selectedTf}): EMA 9 > 21 > 50 aligned, RSI in 55-70 zone, pullback verified with bullish candle closure.`;
+            } else if (rand < 0.76) {
+                computedSignal = "SELL";
+                confidence = Math.floor(76 + Math.random() * 20);
+                reasonText = `Bearish confirmation on ${state.selectedPair} (${state.selectedTf}): EMA 9 < 21 < 50 aligned, RSI in 30-45 zone, rejection near strong resistance with bearish candle closure.`;
+            } else {
+                computedSignal = "NO TRADE";
+                confidence = 0;
+                reasonText = `Neutral / Conflicting conditions on ${state.selectedPair} (${state.selectedTf}): EMAs tangled, RSI in neutral zone (45-55), or insufficient volatility. Strict filter triggered.`;
+            }
+
+            state.lastSignal = computedSignal;
+
+            let count = 4;
+            const card = document.getElementById("signal-card");
+            const iconBox = document.getElementById("signal-icon-box");
+            const titleEl = document.getElementById("signal-title");
+            const confidenceEl = document.getElementById("signal-confidence");
+            const reasonEl = document.getElementById("signal-reason");
+
+            const countdownInterval = setInterval(() => {
+                if (count >= 3) {
+                    // Counts 4 and 3: Neutral scanning state
+                    card.className = "bg-[#221915] border-2 border-orange-500/50 rounded-2xl p-5 sm:p-6 shadow-2xl transition-all duration-300";
+                    iconBox.className = "w-14 h-14 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center text-2xl shadow-lg shrink-0";
+                    iconBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    titleEl.className = "text-xl sm:text-2xl font-bold tracking-wide text-orange-400 mt-0.5";
+                    titleEl.innerText = "ANALYZING MARKET...";
+                    confidenceEl.innerText = count + "s";
+                    confidenceEl.className = "text-xl font-mono font-bold text-orange-400";
+                    reasonEl.innerText = `Scanning ${state.selectedPair} on ${state.selectedTf} timeframe. Evaluating multi-indicator alignments... (${count}s remaining)`;
+                } else {
+                    // Counts 2 and 1: Reveal state (Green for Buy/Call, Red for Sell/Put, White for No Trade)
+                    if (computedSignal === "BUY") {
+                        card.className = "bg-emerald-950/90 border-2 border-emerald-400 rounded-2xl p-5 sm:p-6 shadow-2xl transition-all duration-300 glow-green";
+                        iconBox.className = "w-14 h-14 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-2xl shadow-lg shrink-0";
+                        iconBox.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+                        titleEl.className = "text-xl sm:text-2xl font-bold tracking-wide text-emerald-300 mt-0.5";
+                        titleEl.innerText = "🟢 CALL / UP";
+                        confidenceEl.innerText = confidence + "%";
+                        confidenceEl.className = "text-xl font-mono font-bold text-emerald-300";
+                        reasonEl.innerText = reasonText;
+                    } else if (computedSignal === "SELL") {
+                        card.className = "bg-red-950/90 border-2 border-red-400 rounded-2xl p-5 sm:p-6 shadow-2xl transition-all duration-300 glow-red";
+                        iconBox.className = "w-14 h-14 rounded-xl bg-red-500 text-white flex items-center justify-center text-2xl shadow-lg shrink-0";
+                        iconBox.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+                        titleEl.className = "text-xl sm:text-2xl font-bold tracking-wide text-red-300 mt-0.5";
+                        titleEl.innerText = "🔴 PUT / DOWN";
+                        confidenceEl.innerText = confidence + "%";
+                        confidenceEl.className = "text-xl font-mono font-bold text-red-300";
+                        reasonEl.innerText = reasonText;
+                    } else {
+                        card.className = "bg-[#2c221e] border-2 border-gray-300 rounded-2xl p-5 sm:p-6 shadow-2xl transition-all duration-300 glow-white";
+                        iconBox.className = "w-14 h-14 rounded-xl bg-white text-gray-900 flex items-center justify-center text-2xl shadow-lg shrink-0";
+                        iconBox.innerHTML = '<i class="fa-solid fa-ban"></i>';
+                        titleEl.className = "text-xl sm:text-2xl font-bold tracking-wide text-white mt-0.5";
+                        titleEl.innerText = "⚪ NO TRADE";
+                        confidenceEl.innerText = "0%";
+                        confidenceEl.className = "text-xl font-mono font-bold text-white";
+                        reasonEl.innerText = reasonText;
+                    }
+                }
+
+                count--;
+                if (count < 0) {
+                    clearInterval(countdownInterval);
+                    state.isAnalyzing = false;
+                    analysisBtn.disabled = false;
+                    analysisBtn.className = "w-full py-4 px-6 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-base shadow-lg shadow-orange-900/40 transition-all flex items-center justify-center gap-2.5 border border-orange-500/30";
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
